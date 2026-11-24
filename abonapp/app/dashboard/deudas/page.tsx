@@ -38,7 +38,7 @@ export default function DeudasPage() {
             <tr key={d.id} className="border-t">
               <td className="p-3 font-medium">{d.cliente}</td><td className="p-3">{d.descripcion}</td><td className="p-3">{formatCOP(d.valorInicial)}</td><td className="p-3">{formatCOP(d.totalAbonado)}</td><td className="p-3">{formatCOP(d.saldoPendiente)}</td>
               <td className="p-3">{d.fechaLimite ? formatFecha(d.fechaLimite) : "—"}</td><td className="p-3"><EstadoBadge estado={d.estado} /></td>
-              <td className="space-x-3 whitespace-nowrap p-3 text-right"><Link href={`/dashboard/deudas/${d.id}`} className="text-brand">Detalle</Link><button onClick={() => setForm(d)} className="text-brand">Editar</button>{d.totalAbonado === 0 && <button onClick={() => setAnular(d)} className="text-red-600">Anular</button>}</td>
+              <td className="space-x-3 whitespace-nowrap p-3 text-right"><Link href={`/dashboard/deudas/detalle/?id=${d.id}`} className="text-brand">Detalle</Link><button onClick={() => setForm(d)} className="text-brand">Editar</button>{d.totalAbonado === 0 && <button onClick={() => setAnular(d)} className="text-red-600">Anular</button>}</td>
             </tr>))}</tbody></table></div>)}
       {form && <Modal title={form === "nueva" ? "Nueva deuda" : "Editar deuda"} onClose={() => setForm(null)}>
         <DeudaForm deuda={form === "nueva" ? undefined : form} onCancel={() => setForm(null)} onDone={() => { setForm(null); setMsg("Deuda guardada."); recargar(); }} /></Modal>}

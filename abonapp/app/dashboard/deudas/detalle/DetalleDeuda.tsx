@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import Modal, { btnPrimary } from "@/components/common/Modal";
 import { Empty, ErrorMsg, OkMsg } from "@/components/common/Feedback";
@@ -11,8 +11,8 @@ import { formatCOP, formatFecha } from "@/lib/format";
 
 type Detalle = Awaited<ReturnType<typeof deudasService.obtener>>;
 
-export default function DetalleDeudaPage() {
-  const { id } = useParams<{ id: string }>();
+export default function DetalleDeuda() {
+  const id = useSearchParams().get("id") ?? "";
   const [d, setD] = useState<Detalle | null>(null);
   const [error, setError] = useState(""); const [msg, setMsg] = useState(""); const [abono, setAbono] = useState(false);
   const cargar = useCallback(() => { deudasService.obtener(Number(id)).then(setD).catch((e) => setError(e.message)); }, [id]);
