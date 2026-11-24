@@ -1,0 +1,20 @@
+{
+  "name": "abonapp-backend",
+  "version": "1.0.0",
+  "description": "API REST para AbonApp — proyecto universitario",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0"
+  },
+  "allowScripts": {
+    "better-sqlite3@9.6.0": true,
+    "sqlite3@6.0.1": true
+  }
+}
