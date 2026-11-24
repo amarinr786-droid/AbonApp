@@ -1,0 +1,3 @@
+node_modules/
+abonapp.db*
+.env
