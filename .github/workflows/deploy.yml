@@ -13,8 +13,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  check-secrets:
+    name: Comprobar secretos de AWS
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - name: Verificar AWS_ACCESS_KEY_ID
+        id: check
+        env:
+          AWS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        run: |
+          if [ -n "$AWS_KEY" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Configura los secretos AWS_* y EC2_* para habilitar el despliegue."
+          fi
+
   deploy-frontend:
     name: Frontend · S3 + CloudFront
+    needs: check-secrets
+    if: needs.check-secrets.outputs.configured == 'true'
     runs-on: ubuntu-latest
     environment: production
     defaults:
@@ -55,6 +75,8 @@ jobs:
 
   deploy-backend:
     name: Backend · EC2 + PM2
+    needs: check-secrets
+    if: needs.check-secrets.outputs.configured == 'true'
     runs-on: ubuntu-latest
     environment: production
     steps:

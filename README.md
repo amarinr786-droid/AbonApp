@@ -286,7 +286,7 @@ Se ejecuta al hacer **push a `main`** o manualmente (`workflow_dispatch`). Usa e
 | `EC2_SSH_KEY` | Llave privada `.pem` del key pair de EC2. |
 | `EC2_APP_DIR` | Ruta del proyecto en EC2 (por ejemplo `/home/ubuntu/AbonApp`). |
 
-> **AWS Academy:** las credenciales del laboratorio caducan. Si el laboratorio se reinicia, actualiza los secretos `AWS_*` antes de volver a desplegar. El workflow también puede ejecutarse a mano desde la pestaña **Actions**.
+> **AWS Academy:** las credenciales del laboratorio caducan. Si el laboratorio se reinicia, actualiza los secretos `AWS_*` antes de volver a desplegar. El workflow también puede ejecutarse a mano desde la pestaña **Actions**. Mientras no existan los secretos, el job de despliegue se omite (no falla).
 
 ---
 
