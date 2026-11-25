@@ -10,7 +10,7 @@
 
 ## Información académica
 
-- **Universidad: Universidad de la costa CUC
+- **Universidad: Universidad de la costa CUC**
 - **Programa / asignatura**: Buenas practicas de desarrollo de software 
 - **Integrantes:**
   - ABRAHAM MARIN REYES — [@amarinr786-droid](https://github.com/amarinr786-droid)
