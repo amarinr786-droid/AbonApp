@@ -6,10 +6,9 @@ const nextConfig: NextConfig = {
   trailingSlash: true, // /login/ -> login/index.html (necesario para S3)
   images: { unoptimized: true },
   devIndicators: false, // oculta el indicador "N" de Next.js en modo desarrollo
-  experimental: {
-    agentFeedback: true,
-  },
   turbopack: {
+    // Fija la raíz del workspace para no escanear lockfiles fuera del repo.
+    root: process.cwd(),
     // Procesa Tailwind CSS 4 en los archivos .css (sin esto la app queda sin estilos).
     rules: {
       "*.css": {

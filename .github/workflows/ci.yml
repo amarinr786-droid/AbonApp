@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend · lint + build estático
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: abonapp
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: abonapp/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Build (exportación estática)
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: /api
+
+      - name: Publicar artefacto out/
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-out
+          path: abonapp/out
+          retention-days: 7
+
+  backend:
+    name: Backend · tests de API
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Pruebas (node:test)
+        run: npm test
+        env:
+          NODE_ENV: test

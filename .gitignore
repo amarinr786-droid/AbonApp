@@ -1,0 +1,6 @@
+# Proyecto local ajeno a AbonApp (no forma parte de esta entrega)
+dataProject/
+
+# Sistema operativo / editor
+.DS_Store
+Thumbs.db

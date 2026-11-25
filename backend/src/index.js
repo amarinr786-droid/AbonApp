@@ -54,4 +54,9 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ message: "Error interno del servidor." });
 });
 
-app.listen(PORT, () => console.log(`AbonApp backend escuchando en http://localhost:${PORT}`));
+// Solo abre el puerto cuando se ejecuta directamente (no al importarlo en pruebas).
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`AbonApp backend escuchando en http://localhost:${PORT}`));
+}
+
+module.exports = app;

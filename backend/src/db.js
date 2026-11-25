@@ -2,7 +2,7 @@
 const { DatabaseSync } = require("node:sqlite");
 const path = require("path");
 
-const DB_PATH = path.join(__dirname, "..", "abonapp.db");
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, "..", "abonapp.db");
 const db = new DatabaseSync(DB_PATH);
 
 db.exec("PRAGMA foreign_keys = ON;");
@@ -79,4 +79,4 @@ db.exec(`
 
 console.log("✅ Base de datos lista:", DB_PATH);
 
-module.exports = { run, get, all };
+module.exports = { run, get, all, db };
