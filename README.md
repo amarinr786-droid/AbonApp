@@ -141,6 +141,7 @@ AbonApp/
 │   ├── ecosystem.config.js            # Configuración de PM2 para producción
 │   └── tests/                         # Pruebas de API con node:test
 ├── docs/                              # Evidencias y guía de despliegue
+│   ├── BITACORA.md                    # Bitácora del trabajo de cierre
 │   ├── DEPLOY.md
 │   ├── apache-abonapp.conf            # VirtualHost de referencia (proxy /api)
 │   ├── landing.png
@@ -351,6 +352,8 @@ Con esto la app queda en `https://abonapp.tech`, sin IP, sin puertos y sin URLs 
 
 ## 11. Recursos adicionales
 
+- [Bitácora de la entrega final](docs/BITACORA.md) — cambios, correcciones y verificación.
+- [Guía de despliegue](docs/DEPLOY.md) — pasos reproducibles en AWS.
 - [Next.js — Static Exports](https://nextjs.org/docs/app/guides/static-exports)
 - [Express.js](https://expressjs.com/)
 - [Node.js — `node:sqlite`](https://nodejs.org/api/sqlite.html)
