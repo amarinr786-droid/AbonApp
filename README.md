@@ -43,8 +43,7 @@ flowchart LR
     AP -->|"/* (estáticos)"| WWW["/var/www/html<br/>out/ (Next.js export)"]
     AP -->|"/api/* (proxy)"| API["Express :3000<br/>PM2 (127.0.0.1)"]
     API -->|"lectura / escritura"| DB[("SQLite abonapp.db<br/>node:sqlite · WAL")]
-    DNS["Name.com / Route 53<br/>A @ y www → Elastic IP"] -.-> AP
-    S3["Amazon S3<br/>(respaldo del build)"] -.->|"copia opcional"| WWW
+    DNS["Name.com<br/>A @ y www → Elastic IP"] -.-> AP
 ```
 
 **Por qué Apache delante de Express:** el frontend estático y la API quedan bajo el **mismo origen** (`https://abonapp.tech` y `https://abonapp.tech/api`). Apache sirve `out/` y hace *reverse proxy* de `/api` hacia `127.0.0.1:3000`. Así la cookie de sesión no es de terceros, el navegador no la bloquea y el build usa `NEXT_PUBLIC_API_URL=/api`.
@@ -56,8 +55,7 @@ flowchart LR
 | **Certbot (Let's Encrypt)** | Certificado TLS gratuito para `abonapp.tech` y `www`, con redirección HTTP → HTTPS. |
 | **Elastic IP** | IP pública fija asociada a la instancia para que el DNS no se rompa al reiniciar. |
 | **SQLite (`node:sqlite`)** | Base de datos embebida en un archivo, con `WAL` y `PRAGMA foreign_keys = ON`. También persiste las sesiones, que sobreviven a reinicios y despliegues. |
-| **Amazon S3** | Almacenamiento del build estático como respaldo/evidencia; no es el origen de producción. |
-| **Name.com / Route 53** | DNS del dominio personalizado (registros `A` hacia la Elastic IP). |
+| **Name.com** | DNS del dominio personalizado (registros `A` hacia la Elastic IP). |
 | **GitHub Actions** | CI (lint, build, tests) y CD (build + `scp` + `rsync` + `pm2 reload`) descritos en `.github/workflows/`. |
 
 ### Variables de entorno del backend
@@ -120,7 +118,7 @@ AbonApp/
 │   │       ├── page.tsx               # Resumen financiero
 │   │       ├── clientes/page.tsx
 │   │       ├── deudas/page.tsx
-│   │       ├── deudas/detalle/        # Detalle vía ?id= (compatible con S3)
+│   │       ├── deudas/detalle/        # Detalle vía ?id= (compatible con exportación estática)
 │   │       ├── abonos/page.tsx
 │   │       ├── plan/page.tsx
 │   │       └── configuracion/page.tsx
@@ -361,7 +359,7 @@ Con esto la app queda en `https://abonapp.tech`, sin IP, sin puertos y sin URLs 
 - **Elastic IP**: IP pública estable para que el DNS del dominio no cambie.
 - **SQLite sobre EBS**: base embebida suficiente para el alcance académico; WAL mejora la concurrencia. En un entorno real se migraría a RDS.
 - **Security Group**: expone solo **22** (restringido a la IP del administrador) y **80/443**; el puerto **3000 nunca se abre a Internet**.
-- **S3 (respaldo)**: conserva una copia del build estático como evidencia y respaldo; la entrega se sirve desde EC2 con dominio propio y HTTPS.
+- **Sin S3 ni CloudFront**: el export estático se sirve desde Apache en la misma instancia, de modo que el frontend y la API comparten origen y la cookie de sesión funciona. Servir el frontend desde S3 obligaría a separar orígenes y añadir servicios sin beneficio para el alcance del proyecto.
 - **DNS**: resolución del dominio propio (`A @` y `A www` hacia la Elastic IP).
 
 ---
