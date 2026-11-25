@@ -25,7 +25,7 @@ export default function Landing() {
           <div className="mt-8 flex justify-center gap-3"><Link href="/register" className="rounded-lg bg-brand px-5 py-3 text-white">Comenzar ahora</Link><a href="#planes" className="rounded-lg border bg-white px-5 py-3">Conocer los planes</a></div>
         </section>
         <section id="funcionalidades"><h2 className="mb-6 text-center text-2xl font-semibold">Funcionalidades principales</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{FUNC.map((f) => <div key={f} className="rounded-xl border bg-white p-5 font-medium">{f}</div>)}</div></section>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{FUNC.map((f) => <div key={f} className="rounded-2xl border border-slate-200 bg-white p-5 font-medium shadow-sm">{f}</div>)}</div></section>
         <section id="planes"><h2 className="mb-2 text-center text-2xl font-semibold">Planes y precios</h2>
           <p className="mb-6 text-center text-sm text-slate-500">Propuesta académica: no se realizan cobros reales.</p>
           <div className="grid gap-4 md:grid-cols-3">{PLANES.map((p) => (
