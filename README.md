@@ -369,20 +369,25 @@ Configuración DNS: Vinculación del dominio personalizado mediante registros de
 
 ---
 
-## 11. Recursos adicionales
+## 11. Documentación y Recursos Técnicos
 
-- [Bitácora de la entrega final](docs/BITACORA.md) — cambios, correcciones y verificación.
-- [Guía de despliegue](docs/DEPLOY.md) — pasos reproducibles en AWS.
-- [Referencia de la API](docs/API.md) — endpoints, cuerpos y códigos de estado.
-- [Guía de pruebas](docs/PRUEBAS.md) — pruebas automatizadas y checklist manual.
-- [Guía de colaboración](CONTRIBUTING.md) — ramas, commits y pull requests.
-- [Next.js — Static Exports](https://nextjs.org/docs/app/guides/static-exports)
-- [Express.js](https://expressjs.com/)
-- [Node.js — `node:sqlite`](https://nodejs.org/api/sqlite.html)
-- [Tailwind CSS v4](https://tailwindcss.com/docs)
-- [Apache HTTP Server — mod_proxy](https://httpd.apache.org/docs/2.4/mod/mod_proxy.html)
-- [Certbot — Apache](https://certbot.eff.org/instructions?ws=apache&os=ubuntufocal)
-- [PM2 — Process Manager](https://pm2.keymetrics.io/docs/usage/quick-start/)
-- [GitHub Actions — Deploying to Amazon EC2](https://docs.github.com/en/actions/deployment/deploying-to-your-cloud-provider/deploying-to-amazon-ec2)
-- [GitHub Student Developer Pack](https://education.github.com/pack)
-- [Conventional Commits](https://www.conventionalcommits.org/es/)
+### Documentación Interna del Proyecto
+
+* [Bitácora de Entrega Final](https://www.google.com/search?q=docs/BITACORA.md) — Registro cronológico de cambios, correcciones y validaciones de producción.
+* [Guía de Despliegue](https://www.google.com/search?q=docs/DEPLOY.md) — Procedimiento paso a paso para el aprovisionamiento y despliegue reproducible en AWS.
+* [Referencia de la API](https://www.google.com/search?q=docs/API.md) — Especificación detallada de *endpoints*, esquemas de petición/respuesta y códigos de estado HTTP.
+* [Guía de Pruebas](https://www.google.com/search?q=docs/PRUEBAS.md) — Suite de pruebas automatizadas y lista de verificación funcional.
+* [Guía de Contribución](https://www.google.com/search?q=CONTRIBUTING.md) — Estándares de ramificación (*branching*), mensajes de *commit* y flujo de *Pull Requests*.
+
+### Referencias Técnicas y Stack Tecnológico
+
+* [Next.js — Static Exports](https://nextjs.org/docs/app/guides/static-exports) — Documentación oficial para generación de sitios estáticos.
+* [Express.js](https://expressjs.com/) — Framework minimalista para el desarrollo de la API REST.
+* [Node.js — Módulo `node:sqlite](https://nodejs.org/api/sqlite.html)` — API nativa de persistencia relacional embebida.
+* [Tailwind CSS v4](https://tailwindcss.com/docs) — Framework de estilos basado en utilidades.
+* [Apache HTTP Server — `mod_proxy](https://httpd.apache.org/docs/2.4/mod/mod_proxy.html)` — Configuración de proxy inverso y enrutamiento de mismo origen.
+* [Certbot — Integración con Apache](https://certbot.eff.org/instructions?ws=apache&os=ubuntufocal) — Automatización y renovación de certificados SSL/TLS.
+* [PM2 — Process Manager](https://pm2.keymetrics.io/docs/usage/quick-start/) — Gestión de procesos y alta disponibilidad para aplicaciones Node.js.
+* [GitHub Actions — Despliegue en Amazon EC2](https://docs.github.com/en/actions/deployment/deploying-to-your-cloud-provider/deploying-to-amazon-ec2) — Automatización de integración y entrega continua (CI/CD).
+* [GitHub Student Developer Pack](https://education.github.com/pack) — Programa de beneficios de infraestructura y dominios educativos.
+* [Conventional Commits](https://www.conventionalcommits.org/es/) — Especificación para la estandarización del historial de versiones.
