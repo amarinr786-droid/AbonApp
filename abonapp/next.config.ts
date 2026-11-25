@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   output: "export",
   trailingSlash: true, // /login/ -> login/index.html (necesario para S3)
   images: { unoptimized: true },
+  devIndicators: false, // oculta el indicador "N" de Next.js en modo desarrollo
   experimental: {
     agentFeedback: true,
   },
