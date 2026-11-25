@@ -10,12 +10,12 @@
 
 ## Información académica
 
-- **Universidad:** Universidad Nacional Abierta y a Distancia (UNAD)
-- **Programa / asignatura:** `[POR COMPLETAR: programa y semestre]`
+- **Universidad: Universidad de la costa CUC
+- **Programa / asignatura**: Buenas practicas de desarrollo de software 
 - **Integrantes:**
   - Abraham Marín — [@amarinr786-droid](https://github.com/amarinr786-droid)
   - Jayri Nicole Barreto Polo — `[POR COMPLETAR: usuario de GitHub]`
-  - `[POR COMPLETAR: tercer integrante — usuario de GitHub]`
+  - ANDRES CAMILO ZEA TARAZONA — @azeat0001
 - **Corte:** 3
 
 ---
