@@ -69,6 +69,13 @@ test("registro, sesión y /me", async () => {
   assert.equal(me.data.nombre, "Usuario de prueba");
 });
 
+test("la sesión se persiste en SQLite", () => {
+  // Sin este store, express-session usaría memoria y los reinicios de PM2
+  // cerrarían la sesión de todos los usuarios.
+  const { n } = db.prepare("SELECT COUNT(*) AS n FROM sesiones").get();
+  assert.ok(n > 0, "debe existir al menos una sesión guardada en la tabla sesiones");
+});
+
 test("flujo cliente -> deuda -> abonos y recálculo de saldo", async () => {
   const cliente = await call("POST", "/api/clientes", {
     nombre: "Cliente Prueba",

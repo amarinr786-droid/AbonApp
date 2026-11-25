@@ -8,6 +8,7 @@ const clientesRoutes = require("./routes/clientes");
 const deudasRoutes = require("./routes/deudas");
 const abonosRoutes = require("./routes/abonos");
 const dashboardRoutes = require("./routes/dashboard");
+const SqliteSessionStore = require("./sessionStore");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,9 +25,11 @@ app.use(express.json());
 
 app.set("trust proxy", 1);
 
-// Sesión basada en cookie httpOnly (nunca expone el token al JS del browser)
+// Sesión basada en cookie httpOnly (nunca expone el token al JS del browser).
+// El store en SQLite conserva las sesiones entre reinicios y despliegues.
 app.use(session({
   secret: process.env.SESSION_SECRET || "abonapp-secret-dev-change-in-prod",
+  store: new SqliteSessionStore(),
   resave: false,
   saveUninitialized: false,
   cookie: {
