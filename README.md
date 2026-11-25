@@ -14,7 +14,7 @@
 - **Programa / asignatura**: Buenas practicas de desarrollo de software 
 - **Integrantes:**
   - ABRAHAM MARIN REYES — [@amarinr786-droid](https://github.com/amarinr786-droid)
-  - JAYRI NICOLE BARRETO POLO — [POR COMPLETAR: usuario de GitHub]
+  - JAYRI NICOLE BARRETO POLO — [@jayrinicolleb-boop](https://github.com/jayrinicolleb-boop)
   - ANDRES CAMILO ZEA TARAZONA — [@azeat0001](https://github.com/Azeat)
 - **Corte:** 3
 
