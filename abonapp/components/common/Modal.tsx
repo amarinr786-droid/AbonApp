@@ -11,5 +11,5 @@ export default function Modal({ title, onClose, children }: { title: string; onC
   );
 }
 export const inputCls = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-emerald-100";
-export const btnPrimary = "rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white disabled:opacity-60";
-export const btnGhost = "rounded-lg border bg-white px-3 py-2 text-sm";
+export const btnPrimary = "rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60";
+export const btnGhost = "rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50";
