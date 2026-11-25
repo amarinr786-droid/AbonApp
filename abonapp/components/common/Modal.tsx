@@ -10,6 +10,6 @@ export default function Modal({ title, onClose, children }: { title: string; onC
     </div>
   );
 }
-export const inputCls = "w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-brand";
+export const inputCls = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-emerald-100";
 export const btnPrimary = "rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white disabled:opacity-60";
 export const btnGhost = "rounded-lg border bg-white px-3 py-2 text-sm";
