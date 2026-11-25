@@ -151,13 +151,13 @@ AbonApp/
 └── README.md
 ```
 
-### ¿Dónde está cada cosa? (para la sustentación)
+### Arquitectura y Estructura del Proyecto
 
-- **Componente principal / entrada:** `abonapp/app/page.tsx` (landing). El árbol se monta en `app/layout.tsx`.
-- **Configuración de Next:** `abonapp/next.config.ts` define `output: "export"`, `trailingSlash: true`, imágenes sin optimizar y el loader de Tailwind para Turbopack.
-- **Estáticos generados:** `abonapp/out/` contiene `index.html`, una carpeta por ruta (`login/`, `dashboard/`, etc.), `404.html`, y los assets en `out/_next/static/` (JS, CSS y fuentes).
-- **CSS:** `app/globals.css` (Tailwind 4). **JS:** componentes `.tsx` compilados a `out/_next/static/chunks/`.
-- **Detalle de deuda sin servidor de rutas:** se usa `/dashboard/deudas/detalle/?id=123` en lugar de una ruta dinámica, porque la exportación estática de Next.js no genera rutas con parámetros; el `id` se lee con `useSearchParams`.
+* **Punto de entrada y layout raíz:** La página principal (*landing*) se encuentra en `abonapp/app/page.tsx`, mientras que el árbol global de la aplicación y los proveedores se estructuran en `app/layout.tsx`.
+* **Configuración de Next.js:** Definida en `abonapp/next.config.ts`, donde se establece la exportación estática (`output: "export"`), el uso de barras finales en las rutas (`trailingSlash: true`), la desactivación de la optimización dinámica de imágenes y el cargador de Tailwind CSS para Turbopack.
+* **Generación de archivos estáticos:** El directorio de compilación `abonapp/out/` almacena el punto de entrada `index.html`, subdirectorios independientes por cada ruta (`login/`, `dashboard/`), la página de error `404.html` y los recursos estáticos compilados en `out/_next/static/` (JavaScript, CSS y tipografías).
+* **Estilos y empaquetado de scripts:** Los estilos globales se gestionan mediante Tailwind CSS v4 en `app/globals.css`, mientras que los componentes React (`.tsx`) se transpilan y dividen en fragmentos optimizados (*chunks*) dentro de `out/_next/static/chunks/`.
+* **Enrutamiento dinámico en entorno estático:** Para visualizar el detalle de cada deuda se emplea el patrón de consulta `/dashboard/deudas/detalle/?id=123` en lugar de segmentos dinámicos tradicionales (`[id]`). Dado que la exportación estática (*SSG*) no resuelve parámetros dinámicos en tiempo de ejecución sin un servidor Node.js, el identificador se captura directamente en el cliente mediante el *hook* `useSearchParams`.
 
 ---
 
