@@ -140,13 +140,16 @@ AbonApp/
 │   │   └── routes/                    # auth, clientes, deudas, abonos, dashboard
 │   ├── ecosystem.config.js            # Configuración de PM2 para producción
 │   └── tests/                         # Pruebas de API con node:test
-├── docs/                              # Evidencias y guía de despliegue
+├── docs/                              # Evidencias y documentación
+│   ├── API.md                         # Referencia de endpoints
 │   ├── BITACORA.md                    # Bitácora del trabajo de cierre
 │   ├── DEPLOY.md
+│   ├── PRUEBAS.md                     # Pruebas automatizadas y checklist
 │   ├── apache-abonapp.conf            # VirtualHost de referencia (proxy /api)
 │   ├── landing.png
 │   ├── login.png
 │   └── dashboard.png
+├── CONTRIBUTING.md                    # Ramas, commits y pull requests
 └── README.md
 ```
 
@@ -204,6 +207,18 @@ Abre <http://localhost:3001>. El backend debe estar corriendo primero.
 cd backend
 npm test
 ```
+
+Ejecuta 3 pruebas de API con `node:test` sobre una base temporal: salud, registro/sesión y flujo cliente → deuda → abono con recálculo de saldo.
+
+Verifica también el frontend:
+
+```bash
+cd abonapp
+npm run lint
+NEXT_PUBLIC_API_URL=/api npm run build
+```
+
+La lista completa de casos automatizados y manuales está en **[docs/PRUEBAS.md](docs/PRUEBAS.md)**.
 
 ---
 
@@ -354,6 +369,9 @@ Con esto la app queda en `https://abonapp.tech`, sin IP, sin puertos y sin URLs 
 
 - [Bitácora de la entrega final](docs/BITACORA.md) — cambios, correcciones y verificación.
 - [Guía de despliegue](docs/DEPLOY.md) — pasos reproducibles en AWS.
+- [Referencia de la API](docs/API.md) — endpoints, cuerpos y códigos de estado.
+- [Guía de pruebas](docs/PRUEBAS.md) — pruebas automatizadas y checklist manual.
+- [Guía de colaboración](CONTRIBUTING.md) — ramas, commits y pull requests.
 - [Next.js — Static Exports](https://nextjs.org/docs/app/guides/static-exports)
 - [Express.js](https://expressjs.com/)
 - [Node.js — `node:sqlite`](https://nodejs.org/api/sqlite.html)
