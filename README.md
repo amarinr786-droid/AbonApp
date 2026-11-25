@@ -350,16 +350,22 @@ Con esto la app queda en `https://abonapp.tech`, sin IP, sin puertos y sin URLs 
 
 ---
 
-## 10. Justificación de los servicios AWS (para la sustentación)
+#10. Justificación de la Arquitectura e Infraestructura en AWS
+Amazon EC2 (Cómputo): Instancia dedicada para alojar tanto el servidor web Apache como el entorno de ejecución del backend en Express. La disponibilidad del proceso Node.js se garantiza mediante PM2, gestionando reinicios automáticos ante fallos y centralizando el registro de eventos (logs).
 
-- **EC2**: cómputo para Apache y Express; se administra con PM2 para reinicio automático y logs.
-- **Apache 2.4**: servidor web maduro, sirve el export estático y hace *reverse proxy* de `/api`, manteniendo un solo origen y cookies funcionales.
-- **Certbot / Let's Encrypt**: TLS gratuito y renovación automática, sin depender de un balanceador.
-- **Elastic IP**: IP pública estable para que el DNS del dominio no cambie.
-- **SQLite sobre EBS**: base embebida suficiente para el alcance académico; WAL mejora la concurrencia. En un entorno real se migraría a RDS.
-- **Security Group**: expone solo **22** (restringido a la IP del administrador) y **80/443**; el puerto **3000 nunca se abre a Internet**.
-- **Sin S3 ni CloudFront**: el export estático se sirve desde Apache en la misma instancia, de modo que el frontend y la API comparten origen y la cookie de sesión funciona. Servir el frontend desde S3 obligaría a separar orígenes y añadir servicios sin beneficio para el alcance del proyecto.
-- **DNS**: resolución del dominio propio (`A @` y `A www` hacia la Elastic IP).
+Apache HTTP Server 2.4 (Servidor Web y Proxy Inverso): Encargado de servir los archivos de la exportación estática de Next.js y actuar como reverse proxy para las peticiones dirigidas a /api. Esta configuración mantiene una arquitectura de mismo origen (same-origin), evitando conflictos de CORS y asegurando la validez de las cookies de sesión.
+
+Certbot y Let's Encrypt (Seguridad TLS): Implementación de cifrado HTTPS mediante certificados SSL/TLS gratuitos con renovación automatizada, eliminando la necesidad y el costo adicional de un Application Load Balancer (ALB) para la terminación SSL.
+
+Elastic IP (Direccionamiento Estático): Asignación de una dirección IPv4 pública fija a la instancia EC2, garantizando la persistencia de los registros DNS del dominio ante posibles reinicios o detenciones del servidor.
+
+SQLite sobre Amazon EBS (Persistencia): Base de datos relacional embebida almacenada en el volumen de bloque de la instancia, adecuada para el volumen de transacciones y alcance del proyecto. Se habilita el modo WAL (Write-Ahead Logging) para optimizar la concurrencia de lectura y escritura, proyectando una migración a Amazon RDS en escenarios de escalabilidad comercial.
+
+Security Groups (Control de Acceso y Firewall): Configuración restrictiva a nivel de red que habilita únicamente los puertos 80 (HTTP) y 443 (HTTPS) para el tráfico público, y el puerto 22 (SSH) limitado exclusivamente a la IP del administrador. El puerto interno de la API (3000) permanece aislado de Internet.
+
+Consolidación sin Amazon S3 ni CloudFront: Al servir el frontend estático directamente desde Apache en la misma instancia, se preserva un origen único entre cliente y servidor. Desacoplar el frontend hacia S3 introduciría complejidad innecesaria en la gestión de políticas CORS, cookies entre dominios y costos operativos sin aportar ventajas sustanciales al alcance actual.
+
+Configuración DNS: Vinculación del dominio personalizado mediante registros de tipo A (@ y www) apuntando directamente a la Elastic IP asignada.
 
 ---
 
