@@ -1,10 +1,9 @@
-# AbonApp — Control de deudas y abonos
+AbonApp — Plataforma de Gestión de Cartera, Deudas y Abonos
+AbonApp es una solución SaaS diseñada para pequeños negocios y emprendimientos que buscan optimizar el control de sus cuentas por cobrar. La plataforma centraliza la administración de clientes, el registro de créditos, el seguimiento de abonos parciales o totales y el monitoreo en tiempo real del estado financiero de la cartera.
 
-**AbonApp** es una aplicación web tipo SaaS para pequeños emprendimientos: permite administrar clientes, registrar deudas, controlar abonos parciales o totales y consultar el estado financiero de la cartera en tiempo real.
+Entorno de producción: https://abonapp.tech
 
-> **Aplicación en producción:** <https://abonapp.tech>
->
-> Servida por **Apache + HTTPS (Certbot)** en una instancia **Amazon EC2**, con la API de Express en el mismo origen bajo `/api`. Sin IP, sin puertos y sin URLs por defecto de Netlify/Vercel.
+Arquitectura e infraestructura: Desplegada sobre una instancia Amazon EC2 con servidor web Apache y cifrado SSL/TLS (Certbot). El enrutamiento opera bajo un esquema de mismo origen (same-origin), exponiendo la API REST desarrollada en Express a través de /api y eliminando la exposición directa de direcciones IP, puertos o subdominios genéricos.
 
 ---
 
