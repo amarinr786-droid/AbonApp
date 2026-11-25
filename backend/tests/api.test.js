@@ -54,6 +54,17 @@ test("health responde ok", async () => {
   assert.deepEqual(data, { status: "ok" });
 });
 
+test("un JSON inválido responde 400, no 500", async () => {
+  const res = await fetch(base + "/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{email:roto}",
+  });
+  assert.equal(res.status, 400);
+  const data = await res.json();
+  assert.match(data.message, /JSON/i);
+});
+
 test("registro, sesión y /me", async () => {
   const email = `test-${Date.now()}@abonapp.test`;
   const register = await call("POST", "/api/auth/register", {

@@ -53,8 +53,17 @@ app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
 // Manejo de errores global
 app.use((err, _req, res, _next) => {
-  console.error(err);
-  res.status(500).json({ message: "Error interno del servidor." });
+  const status = Number(err.status || err.statusCode) || 500;
+  if (status >= 500) console.error(err);
+
+  const message =
+    err.type === "entity.parse.failed"
+      ? "El cuerpo de la solicitud no es JSON válido."
+      : status >= 500
+        ? "Error interno del servidor."
+        : err.message;
+
+  res.status(status).json({ message });
 });
 
 // Solo abre el puerto cuando se ejecuta directamente (no al importarlo en pruebas).
