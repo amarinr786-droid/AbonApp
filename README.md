@@ -20,18 +20,17 @@ Arquitectura e infraestructura: Desplegada sobre una instancia Amazon EC2 con se
 
 ---
 
-## 1. Flujo de la aplicación y control de acceso
+## 1. Flujo de la Aplicación y Control de Acceso
 
-La primera vista es una **landing page pública** (`/`) y el acceso a los datos está protegido con **sesiones en cookie `httpOnly`** emitidas por el backend. El dashboard y las rutas de clientes, deudas y abonos nunca quedan abiertos al público.
+La arquitectura de acceso inicia en una **landing page pública** (`/`), mientras que la totalidad de los módulos operativos y datos financieros se encuentran protegidos mediante **sesiones gestionadas por cookies `httpOnly**` emitidas desde el servidor. Esto garantiza que las vistas del panel de control, clientes, deudas y abonos permanezcan inaccesibles para usuarios no autenticados.
 
-1. **Landing page (`/`)**: presentación del servicio, funcionalidades, planes académicos (`Gratuito`, `Básico`, `Profesional`) y llamados a registro/inicio de sesión.
-2. **Autenticación (`/login` y `/register`)**: registro y login contra `/api/auth/*`. La contraseña se guarda con `bcrypt` y la sesión viaja en una cookie `httpOnly` (el JavaScript del navegador no puede leer el token).
-3. **Dashboard (`/dashboard`)**: indicadores de clientes, total en deudas, total abonado, saldo pendiente y últimos movimientos.
-4. **Clientes (`/dashboard/clientes`)**: CRUD con búsqueda por nombre y bloqueo de eliminación si el cliente tiene deudas.
-5. **Deudas (`/dashboard/deudas` y `/dashboard/deudas/detalle/?id=...`)**: creación, edición, filtro por estado (`pendiente`, `parcial`, `pagada`), anulación sin abonos y detalle con historial.
-6. **Abonos (`/dashboard/abonos`)**: historial con filtros por cliente y fechas. Al registrar un abono, el servidor recalcula `total_abonado`, `saldo_pendiente` y `estado`.
-7. **Mi plan y configuración (`/dashboard/plan`, `/dashboard/configuracion`)**: plan activo (simulado, sin cobros), edición de perfil y cambio de contraseña.
-
+1. **Landing Page (`/`):** Interfaz pública de presentación del producto, detallando la propuesta de valor, funcionalidades principales, niveles de suscripción de demostración (*Gratuito*, *Básico* y *Profesional*) y accesos directos a los flujos de registro e inicio de sesión.
+2. **Autenticación y Seguridad (`/login` y `/register`):** Procesos de alta e inicio de sesión integrados con los *endpoints* `/api/auth/*`. Las credenciales se almacenan cifradas mediante algoritmos de *hashing* seguro (`bcrypt`) y la sesión se establece en una cookie con bandera `httpOnly`, mitigando vectores de ataque XSS al impedir su lectura desde el código JavaScript del cliente.
+3. **Panel de Control (`/dashboard`):** Vista ejecutiva con métricas consolidadas en tiempo real: volumen de clientes registrados, monto total de cartera, capital recaudado, saldo pendiente por cobrar y registro de actividad reciente.
+4. **Gestión de Clientes (`/dashboard/clientes`):** Módulo CRUD completo con filtrado dinámico por nombre y reglas de integridad referencial que restringen la eliminación de registros con obligaciones financieras asociadas.
+5. **Gestión de Deudas (`/dashboard/deudas` y `/dashboard/deudas/detalle/?id=...`):** Administración integral del ciclo de vida de los créditos (creación, edición y filtrado por estado: *pendiente*, *parcial* o *pagada*). Incluye validación de anulación condicionada a la ausencia de pagos previos y una vista de detalle con trazabilidad histórica.
+6. **Registro y Control de Abonos (`/dashboard/abonos`):** Historial centralizado de recaudos con filtros por cliente y rango de fechas. Cada registro desencadena una transacción en el servidor que recalcula automáticamente los indicadores `total_abonado`, `saldo_pendiente` y el `estado` de la obligación correspondiente.
+7. **Suscripción y Configuración (`/dashboard/plan` y `/dashboard/configuracion`):** Administración del nivel de suscripción activo (entorno simulado sin pasarela de pagos), actualización de datos del perfil de usuario y gestión segura del cambio de contraseña.
 ---
 
 ## 2. Arquitectura e infraestructura (AWS)
