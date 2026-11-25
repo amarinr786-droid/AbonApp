@@ -14,7 +14,7 @@
 - **Programa / asignatura:** `[POR COMPLETAR: programa y semestre]`
 - **Integrantes:**
   - Abraham Marín — [@amarinr786-droid](https://github.com/amarinr786-droid)
-  - Jayri Nicole Barreto Polo — `[POR COMPLETAR: usuario de GitHub]`
+  - Jayri Nicole Barreto Polo — [@jayrinicolleb-boop](https://github.com/jayrinicolleb-boop)
   - `[POR COMPLETAR: tercer integrante — usuario de GitHub]`
 - **Corte:** 3
 
