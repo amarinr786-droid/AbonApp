@@ -1,9 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 export default function Logo({ href = "/" }: { href?: string }) {
   return (
-    <Link href={href} className="flex items-center gap-2 font-semibold text-brand">
-      <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-white">A</span>
-      <span className="text-lg">AbonApp</span>
+    <Link href={href} className="flex items-center">
+      <Image src="/logo.png" alt="AbonApp" width={160} height={48} priority className="h-10 w-auto" />
     </Link>
   );
 }
