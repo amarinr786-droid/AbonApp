@@ -207,6 +207,33 @@ sudo certbot --apache -d abonapp.tech -d www.abonapp.tech --redirect
 
 Certbot crea el VirtualHost `*:443`, instala el certificado y redirige HTTP → HTTPS. Renovación automática con el timer de systemd (`systemctl status certbot.timer`).
 
+**Paso obligatorio:** Apache debe avisar a Express que la petición original llegó por HTTPS. Si falta, `express-session` crea la sesión pero **no envía la cookie `Secure`**, y el dashboard responde `401 No autenticado`.
+
+```bash
+sudo nano /etc/apache2/sites-available/000-default-le-ssl.conf
+```
+
+Dentro de `<VirtualHost *:443>`:
+
+```apache
+RequestHeader set X-Forwarded-Proto "https"
+```
+
+```bash
+sudo apache2ctl configtest
+sudo systemctl reload apache2
+```
+
+Verifica que la respuesta del login incluya la cookie:
+
+```bash
+curl -s -i -X POST https://abonapp.tech/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"TU_CORREO","password":"TU_CLAVE"}' | grep -i set-cookie
+```
+
+Debe mostrar `Set-Cookie: connect.sid=...; Secure; HttpOnly; SameSite=None`.
+
 Activa la cookie segura:
 
 ```bash
@@ -265,6 +292,7 @@ Luego:
 | Síntoma | Causa probable | Solución |
 |---|---|---|
 | La sesión no se mantiene | `COOKIE_SECURE` no coincide con el esquema, o `FRONTEND_URL` incorrecto | HTTP → `false`; HTTPS → `true`. Revisa `FRONTEND_URL=https://abonapp.tech`. |
+| Login correcto pero el dashboard dice "No autenticado" | Apache no envía `X-Forwarded-Proto: https` y Express no emite la cookie `Secure` | Agrega `RequestHeader set X-Forwarded-Proto "https"` al VirtualHost `*:443` y recarga Apache. |
 | `Cannot find module 'node:sqlite'` | Node < 24 en EC2 | Instala Node 24 (`node -v`). |
 | `502 Bad Gateway` en `/api/*` | PM2 caído | `pm2 status` y `pm2 logs abonapp-api`. |
 | `503` en `/api/*` | `mod_proxy` deshabilitado | `sudo a2enmod proxy proxy_http` y recarga Apache. |

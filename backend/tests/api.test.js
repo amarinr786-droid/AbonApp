@@ -54,6 +54,17 @@ test("health responde ok", async () => {
   assert.deepEqual(data, { status: "ok" });
 });
 
+test("un JSON inválido responde 400, no 500", async () => {
+  const res = await fetch(base + "/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{email:roto}",
+  });
+  assert.equal(res.status, 400);
+  const data = await res.json();
+  assert.match(data.message, /JSON/i);
+});
+
 test("registro, sesión y /me", async () => {
   const email = `test-${Date.now()}@abonapp.test`;
   const register = await call("POST", "/api/auth/register", {
@@ -67,6 +78,13 @@ test("registro, sesión y /me", async () => {
   const me = await call("GET", "/api/auth/me");
   assert.equal(me.status, 200);
   assert.equal(me.data.nombre, "Usuario de prueba");
+});
+
+test("la sesión se persiste en SQLite", () => {
+  // Sin este store, express-session usaría memoria y los reinicios de PM2
+  // cerrarían la sesión de todos los usuarios.
+  const { n } = db.prepare("SELECT COUNT(*) AS n FROM sesiones").get();
+  assert.ok(n > 0, "debe existir al menos una sesión guardada en la tabla sesiones");
 });
 
 test("flujo cliente -> deuda -> abonos y recálculo de saldo", async () => {

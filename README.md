@@ -55,7 +55,7 @@ flowchart LR
 | **Apache 2.4** | Sirve los estáticos de `abonapp/out/` en `/var/www/html`, aplica `FallbackResource`/`ErrorDocument`, y proxya `/api` a `127.0.0.1:3000`. |
 | **Certbot (Let's Encrypt)** | Certificado TLS gratuito para `abonapp.tech` y `www`, con redirección HTTP → HTTPS. |
 | **Elastic IP** | IP pública fija asociada a la instancia para que el DNS no se rompa al reiniciar. |
-| **SQLite (`node:sqlite`)** | Base de datos embebida en un archivo, con `WAL` y `PRAGMA foreign_keys = ON`. |
+| **SQLite (`node:sqlite`)** | Base de datos embebida en un archivo, con `WAL` y `PRAGMA foreign_keys = ON`. También persiste las sesiones, que sobreviven a reinicios y despliegues. |
 | **Amazon S3** | Almacenamiento del build estático como respaldo/evidencia; no es el origen de producción. |
 | **Name.com / Route 53** | DNS del dominio personalizado (registros `A` hacia la Elastic IP). |
 | **GitHub Actions** | CI (lint, build, tests) y CD (build + `scp` + `rsync` + `pm2 reload`) descritos en `.github/workflows/`. |

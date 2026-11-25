@@ -75,6 +75,12 @@ db.exec(`
     fecha       TEXT NOT NULL DEFAULT (date('now')),
     observacion TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS sesiones (
+    sid     TEXT PRIMARY KEY,
+    sess    TEXT NOT NULL,
+    expires INTEGER NOT NULL
+  );
 `);
 
 console.log("✅ Base de datos lista:", DB_PATH);

@@ -8,6 +8,7 @@ const clientesRoutes = require("./routes/clientes");
 const deudasRoutes = require("./routes/deudas");
 const abonosRoutes = require("./routes/abonos");
 const dashboardRoutes = require("./routes/dashboard");
+const SqliteSessionStore = require("./sessionStore");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,9 +25,11 @@ app.use(express.json());
 
 app.set("trust proxy", 1);
 
-// Sesión basada en cookie httpOnly (nunca expone el token al JS del browser)
+// Sesión basada en cookie httpOnly (nunca expone el token al JS del browser).
+// El store en SQLite conserva las sesiones entre reinicios y despliegues.
 app.use(session({
   secret: process.env.SESSION_SECRET || "abonapp-secret-dev-change-in-prod",
+  store: new SqliteSessionStore(),
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -50,8 +53,17 @@ app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
 // Manejo de errores global
 app.use((err, _req, res, _next) => {
-  console.error(err);
-  res.status(500).json({ message: "Error interno del servidor." });
+  const status = Number(err.status || err.statusCode) || 500;
+  if (status >= 500) console.error(err);
+
+  const message =
+    err.type === "entity.parse.failed"
+      ? "El cuerpo de la solicitud no es JSON válido."
+      : status >= 500
+        ? "Error interno del servidor."
+        : err.message;
+
+  res.status(status).json({ message });
 });
 
 // Solo abre el puerto cuando se ejecuta directamente (no al importarlo en pruebas).
