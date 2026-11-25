@@ -2,9 +2,9 @@
 
 **AbonApp** es una aplicación web tipo SaaS para pequeños emprendimientos: permite administrar clientes, registrar deudas, controlar abonos parciales o totales y consultar el estado financiero de la cartera en tiempo real.
 
-> **Aplicación en producción:** <https://abonapp.tu-dominio.com>
+> **Aplicación en producción:** <https://abonapp.tech>
 >
-> *(Reemplaza este dominio por el dominio real configurado en CloudFront/Route 53 antes de la entrega. No se aceptan IP, puertos ni localhost.)*
+> Servida por **Apache + HTTPS (Certbot)** en una instancia **Amazon EC2**, con la API de Express en el mismo origen bajo `/api`. Sin IP, sin puertos y sin URLs por defecto de Netlify/Vercel.
 
 ---
 
@@ -38,33 +38,35 @@ La primera vista es una **landing page pública** (`/`) y el acceso a los datos 
 
 ```mermaid
 flowchart LR
-    U["Usuario (navegador)"] -->|"HTTPS · dominio propio"| CF["Amazon CloudFront<br/>(TLS con ACM)"]
-    CF -->|"/* (estáticos)"| S3["Amazon S3<br/>out/ (Next.js export)"]
-    CF -->|"/api/*"| EC2["Amazon EC2 · Ubuntu<br/>Express :3000 (PM2)"]
-    EC2 -->|"lectura / escritura"| DB[("SQLite abonapp.db<br/>node:sqlite · WAL")]
-    DNS["Route 53 / Namecheap<br/>DNS del dominio"] -.-> CF
+    U["Usuario (navegador)"] -->|"HTTPS · dominio propio"| AP["Amazon EC2 · Ubuntu<br/>Apache 2.4 :443 (Certbot)"]
+    AP -->|"/* (estáticos)"| WWW["/var/www/html<br/>out/ (Next.js export)"]
+    AP -->|"/api/* (proxy)"| API["Express :3000<br/>PM2 (127.0.0.1)"]
+    API -->|"lectura / escritura"| DB[("SQLite abonapp.db<br/>node:sqlite · WAL")]
+    DNS["Name.com / Route 53<br/>A @ y www → Elastic IP"] -.-> AP
+    S3["Amazon S3<br/>(respaldo del build)"] -.->|"copia opcional"| WWW
 ```
 
-**Por qué CloudFront delante de todo:** el frontend y la API quedan bajo el **mismo origen** (`https://dominio.com` y `https://dominio.com/api`). Así la cookie de sesión no es de terceros, el navegador no la bloquea y el build puede usar `NEXT_PUBLIC_API_URL=/api`.
+**Por qué Apache delante de Express:** el frontend estático y la API quedan bajo el **mismo origen** (`https://abonapp.tech` y `https://abonapp.tech/api`). Apache sirve `out/` y hace *reverse proxy* de `/api` hacia `127.0.0.1:3000`. Así la cookie de sesión no es de terceros, el navegador no la bloquea y el build usa `NEXT_PUBLIC_API_URL=/api`.
 
 | Servicio | Función en el proyecto |
 |---|---|
-| **Amazon S3** | Aloja los archivos estáticos generados en `abonapp/out/` (HTML, JS, CSS, fuentes). |
-| **Amazon CloudFront** | CDN + HTTPS con certificado ACM, dominio personalizado y ruteo de `/api/*` hacia EC2. |
-| **Amazon EC2 (Ubuntu 24.04)** | Ejecuta la API REST de Express con PM2 y persiste `abonapp.db` en el volumen EBS. |
+| **Amazon EC2 (Ubuntu 24.04)** | Único servidor de producción: ejecuta Apache, la API de Express con PM2 y SQLite sobre el volumen EBS. |
+| **Apache 2.4** | Sirve los estáticos de `abonapp/out/` en `/var/www/html`, aplica `FallbackResource`/`ErrorDocument`, y proxya `/api` a `127.0.0.1:3000`. |
+| **Certbot (Let's Encrypt)** | Certificado TLS gratuito para `abonapp.tech` y `www`, con redirección HTTP → HTTPS. |
+| **Elastic IP** | IP pública fija asociada a la instancia para que el DNS no se rompa al reiniciar. |
 | **SQLite (`node:sqlite`)** | Base de datos embebida en un archivo, con `WAL` y `PRAGMA foreign_keys = ON`. |
-| **Route 53 / Namecheap** | DNS del dominio personalizado (registro A/ALIAS o CNAME hacia CloudFront). |
-| **AWS IAM** | Usuario/rol con permisos mínimos para que GitHub Actions sincronice S3 e invalide CloudFront. |
-| **GitHub Actions** | CI (lint, build, tests) y CD (S3 + CloudFront + EC2) descritos en `.github/workflows/`. |
+| **Amazon S3** | Almacenamiento del build estático como respaldo/evidencia; no es el origen de producción. |
+| **Name.com / Route 53** | DNS del dominio personalizado (registros `A` hacia la Elastic IP). |
+| **GitHub Actions** | CI (lint, build, tests) y CD (build + `scp` + `rsync` + `pm2 reload`) descritos en `.github/workflows/`. |
 
 ### Variables de entorno del backend
 
 | Variable | Ejemplo | Para qué sirve |
 |---|---|---|
 | `PORT` | `3000` | Puerto de Express. |
-| `FRONTEND_URL` | `https://abonapp.tu-dominio.com` | Origen permitido por CORS (con credenciales). |
+| `FRONTEND_URL` | `https://abonapp.tech` | Origen permitido por CORS (con credenciales). |
 | `SESSION_SECRET` | cadena larga y aleatoria | Firma de la cookie de sesión. |
-| `COOKIE_SECURE` | `true` en producción | Cookie `Secure` + `SameSite=None` (obligatorio con HTTPS). |
+| `COOKIE_SECURE` | `true` con HTTPS | Cookie `Secure` + `SameSite=None`; en HTTP local se usa `false` (`SameSite=Lax`). |
 | `NODE_ENV` | `production` | Modo de ejecución. |
 | `DB_PATH` | `./abonapp.db` (opcional) | Ruta alternativa de SQLite (útil en pruebas). |
 
@@ -104,7 +106,7 @@ AbonApp/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml                     # Integración continua (lint, build, tests)
-│       └── deploy.yml                 # Despliegue a S3 + CloudFront + EC2
+│       └── deploy.yml                 # Despliegue a EC2 (Apache + PM2)
 ├── abonapp/                           # Frontend Next.js (exportación estática)
 │   ├── next.config.ts                 # output: "export", trailingSlash, Turbopack CSS
 │   ├── app/
@@ -136,9 +138,11 @@ AbonApp/
 │   │   ├── db.js                      # SQLite + creación de tablas
 │   │   ├── middleware/auth.js         # requireAuth
 │   │   └── routes/                    # auth, clientes, deudas, abonos, dashboard
+│   ├── ecosystem.config.js            # Configuración de PM2 para producción
 │   └── tests/                         # Pruebas de API con node:test
 ├── docs/                              # Evidencias y guía de despliegue
 │   ├── DEPLOY.md
+│   ├── apache-abonapp.conf            # VirtualHost de referencia (proxy /api)
 │   ├── landing.png
 │   ├── login.png
 │   └── dashboard.png
@@ -151,7 +155,7 @@ AbonApp/
 - **Configuración de Next:** `abonapp/next.config.ts` define `output: "export"`, `trailingSlash: true`, imágenes sin optimizar y el loader de Tailwind para Turbopack.
 - **Estáticos generados:** `abonapp/out/` contiene `index.html`, una carpeta por ruta (`login/`, `dashboard/`, etc.), `404.html`, y los assets en `out/_next/static/` (JS, CSS y fuentes).
 - **CSS:** `app/globals.css` (Tailwind 4). **JS:** componentes `.tsx` compilados a `out/_next/static/chunks/`.
-- **Detalle de deuda sin servidor Node:** se usa `/dashboard/deudas/detalle/?id=123` en lugar de una ruta dinámica, porque en S3 no hay servidor que resuelva `/deudas/[id]`.
+- **Detalle de deuda sin servidor de rutas:** se usa `/dashboard/deudas/detalle/?id=123` en lugar de una ruta dinámica, porque la exportación estática de Next.js no genera rutas con parámetros; el `id` se lee con `useSearchParams`.
 
 ---
 
@@ -208,7 +212,7 @@ npm test
 
 ```bash
 cd abonapp
-# Con CloudFront y mismo dominio, la API se sirve en /api:
+# Apache sirve frontend y API bajo el mismo dominio:
 NEXT_PUBLIC_API_URL=/api npm run build
 ```
 
@@ -220,23 +224,27 @@ $env:NEXT_PUBLIC_API_URL="/api"; npm run build
 
 Genera `abonapp/out/`. **La variable queda incrustada en el JS**: si cambias la URL de la API, vuelve a compilar.
 
-### 6.2 Subir el frontend a S3 + invalidar CloudFront
+### 6.2 Publicar el frontend en Apache (EC2)
 
 ```bash
-aws s3 sync abonapp/out/ s3://TU_BUCKET --delete
-aws cloudfront create-invalidation \
-  --distribution-id TU_DISTRIBUTION_ID --paths "/*"
+# desde tu equipo
+scp -i llave.pem -r abonapp/out ubuntu@IP_ELASTICA:/home/ubuntu/
+
+# en la EC2
+sudo rsync -a --delete /home/ubuntu/out/ /var/www/html/
+sudo chown -R www-data:www-data /var/www/html
+sudo systemctl reload apache2
 ```
 
-El bucket debe tener habilitado **Static website hosting** con `index.html` como documento índice y `404.html` como documento de error. CloudFront entrega HTTPS y el dominio propio.
+El VirtualHost de referencia está en [`docs/apache-abonapp.conf`](docs/apache-abonapp.conf): `DocumentRoot /var/www/html`, `DirectoryIndex index.html`, `ErrorDocument 404 /404.html` y `ProxyPass /api http://127.0.0.1:3000/api`.
 
 ### 6.3 Desplegar el backend en EC2
 
 ```bash
-cd AbonApp/backend
+cd ~/AbonApp/backend
 npm ci --omit=dev
 cp .env.example .env     # editar valores reales
-pm2 start src/index.js --name abonapp-api
+pm2 start ecosystem.config.js
 pm2 save
 ```
 
@@ -244,13 +252,15 @@ Configuración mínima en producción:
 
 ```env
 PORT=3000
-FRONTEND_URL=https://abonapp.tu-dominio.com
+FRONTEND_URL=https://abonapp.tech
 SESSION_SECRET=<cadena aleatoria larga>
 COOKIE_SECURE=true
 NODE_ENV=production
 ```
 
-La guía paso a paso (S3, CloudFront, ACM, DNS, Security Group, PM2 y secretos) está en **[docs/DEPLOY.md](docs/DEPLOY.md)**.
+El puerto **3000 no se publica en el Security Group**: solo Apache (80/443) queda expuesto a Internet y llega a Express por `127.0.0.1`.
+
+La guía paso a paso (EC2, Apache, Certbot, DNS, Security Group, PM2 y secretos) está en **[docs/DEPLOY.md](docs/DEPLOY.md)**.
 
 ---
 
@@ -267,40 +277,50 @@ Se ejecuta en **pull requests y pushes** a `main`/`dev`. No despliega: valida qu
 
 ### `.github/workflows/deploy.yml` — Despliegue continuo
 
-Se ejecuta al hacer **push a `main`** o manualmente (`workflow_dispatch`). Usa el entorno `production`.
+Se ejecuta al hacer **push a `main`** o manualmente (`workflow_dispatch`). Primero comprueba si existen los secretos de EC2: si no existen, los jobs se **omiten** con un aviso (no fallan).
 
 | Job | Pasos | Para qué |
 |---|---|---|
-| **deploy-frontend** | Instala y compila con `/api` → `configure-aws-credentials` → `aws s3 sync --delete` → `cloudfront create-invalidation` | Publica el nuevo `out/` en S3 y limpia la caché de CloudFront. |
-| **deploy-backend** | `appleboy/ssh-action` → `git pull` → `npm ci --omit=dev` → `pm2 reload abonapp-api --update-env` | Actualiza el código en EC2 sin tumbar el proceso (reload de PM2). |
+| **check-secrets** | Lee `EC2_HOST` y publica `configured=true/false` | Evita despliegues en rojo mientras el laboratorio no esté configurado. |
+| **deploy-frontend** | `npm ci` → `npm run build` con `/api` → `appleboy/scp-action` a `/tmp/abonapp-out` → `rsync` a `WEB_ROOT` → `systemctl reload apache2` → `curl /api/health` | Publica el nuevo `out/` en Apache y verifica que la API responde. |
+| **deploy-backend** | `appleboy/ssh-action` → `git pull` → `npm ci --omit=dev` → `pm2 startOrReload ecosystem.config.js --update-env` → `pm2 save` → `curl :3000/api/health` | Actualiza el código en EC2 sin tumbar el proceso (reload de PM2). |
 
 **Secretos del repositorio** (`Settings → Secrets and variables → Actions`):
 
 | Secreto | Valor |
 |---|---|
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | Credenciales IAM con permisos de S3 y CloudFront. |
-| `AWS_REGION` | Región del bucket (por ejemplo `us-east-1`). |
-| `S3_BUCKET` | Nombre del bucket del frontend. |
-| `CLOUDFRONT_DISTRIBUTION_ID` | ID de la distribución. |
-| `EC2_HOST` / `EC2_USER` | IP o DNS público y usuario SSH (`ubuntu`). |
-| `EC2_SSH_KEY` | Llave privada `.pem` del key pair de EC2. |
-| `EC2_APP_DIR` | Ruta del proyecto en EC2 (por ejemplo `/home/ubuntu/AbonApp`). |
+| `EC2_HOST` | IP pública o Elastic IP de la instancia (`98.93.63.119`). |
+| `EC2_USER` | Usuario SSH (`ubuntu`). |
+| `EC2_SSH_KEY` | Contenido completo de la llave privada `.pem` del key pair. |
+| `EC2_APP_DIR` | Ruta del proyecto en EC2 (`/home/ubuntu/AbonApp`). |
+| `WEB_ROOT` | Document root de Apache (`/var/www/html`). |
 
-> **AWS Academy:** las credenciales del laboratorio caducan. Si el laboratorio se reinicia, actualiza los secretos `AWS_*` antes de volver a desplegar. El workflow también puede ejecutarse a mano desde la pestaña **Actions**. Mientras no existan los secretos, el job de despliegue se omite (no falla).
+> **AWS Academy:** la instancia se detiene al cerrar el laboratorio y la IP pública puede cambiar. Asocia una **Elastic IP**, actualiza `EC2_HOST` si cambia y ejecuta el workflow a mano desde la pestaña **Actions**. El despliegue manual con `scp`/`rsync` de la sección 6 sigue disponible como respaldo.
 
 ---
 
 ## 8. Dominio, DNS y HTTPS
 
-1. Registrar el dominio con el **GitHub Student Developer Pack** (Namecheap, Name.com, `.tech`, etc.).
-2. Crear un certificado **ACM en `us-east-1`** (requisito de CloudFront) para `abonapp.tu-dominio.com`.
-3. En CloudFront, agregar el dominio alternativo y seleccionar el certificado.
-4. En el DNS del proveedor:
-   - **Route 53:** registro `A` tipo *Alias* hacia la distribución.
-   - **Namecheap/Name.com:** `CNAME` de `abonapp` hacia `dxxxx.cloudfront.net`.
-5. Forzar HTTPS y redirigir HTTP → HTTPS en CloudFront.
+1. Registrar el dominio con el **GitHub Student Developer Pack** (Namecheap, Name.com, `.tech`, etc.). En este proyecto: **`abonapp.tech`** (plan básico, sin add-ons).
+2. Asociar una **Elastic IP** a la instancia EC2.
+3. En el DNS del proveedor (Name.com → DNS Records):
+   - `A` — host `@` — valor **Elastic IP**
+   - `A` — host `www` — valor **Elastic IP**
+4. Verificar la propagación: `nslookup abonapp.tech`.
+5. En la EC2, emitir el certificado y forzar HTTPS:
 
-Con esto la app queda en `https://abonapp.tu-dominio.com`, sin IP, sin puertos y sin URLs por defecto de Netlify/Vercel.
+```bash
+sudo apt install certbot python3-certbot-apache -y
+sudo certbot --apache -d abonapp.tech -d www.abonapp.tech --redirect
+```
+
+6. Cambiar `COOKIE_SECURE=true` en `backend/.env` y recargar:
+
+```bash
+pm2 restart abonapp-api --update-env
+```
+
+Con esto la app queda en `https://abonapp.tech`, sin IP, sin puertos y sin URLs por defecto de Netlify/Vercel. El certificado de Let's Encrypt se renueva solo (timer de `certbot`).
 
 ---
 
@@ -318,13 +338,14 @@ Con esto la app queda en `https://abonapp.tu-dominio.com`, sin IP, sin puertos y
 
 ## 10. Justificación de los servicios AWS (para la sustentación)
 
-- **S3**: almacenamiento de objetos estáticos, altamente disponible y económico; encaja con la exportación estática de Next.js.
-- **CloudFront**: CDN global, terminación TLS con ACM, caché y **mismo origen** para frontend y API (soluciona las cookies de sesión).
-- **EC2**: cómputo para Express; se administra con PM2 para reinicio automático y logs.
+- **EC2**: cómputo para Apache y Express; se administra con PM2 para reinicio automático y logs.
+- **Apache 2.4**: servidor web maduro, sirve el export estático y hace *reverse proxy* de `/api`, manteniendo un solo origen y cookies funcionales.
+- **Certbot / Let's Encrypt**: TLS gratuito y renovación automática, sin depender de un balanceador.
+- **Elastic IP**: IP pública estable para que el DNS del dominio no cambie.
 - **SQLite sobre EBS**: base embebida suficiente para el alcance académico; WAL mejora la concurrencia. En un entorno real se migraría a RDS.
-- **Security Group**: expone el puerto 3000 solo a los rangos de CloudFront (o a Nginx en el puerto 80).
-- **IAM**: usuario con permisos mínimos (`s3:PutObject`, `s3:DeleteObject`, `s3:ListBucket`, `cloudfront:CreateInvalidation`) para GitHub Actions.
-- **Route 53 / DNS**: resolución del dominio propio y certificado válido.
+- **Security Group**: expone solo **22** (restringido a la IP del administrador) y **80/443**; el puerto **3000 nunca se abre a Internet**.
+- **S3 (respaldo)**: conserva una copia del build estático como evidencia y respaldo; la entrega se sirve desde EC2 con dominio propio y HTTPS.
+- **DNS**: resolución del dominio propio (`A @` y `A www` hacia la Elastic IP).
 
 ---
 
@@ -334,8 +355,9 @@ Con esto la app queda en `https://abonapp.tu-dominio.com`, sin IP, sin puertos y
 - [Express.js](https://expressjs.com/)
 - [Node.js — `node:sqlite`](https://nodejs.org/api/sqlite.html)
 - [Tailwind CSS v4](https://tailwindcss.com/docs)
-- [Amazon S3 — Static website hosting](https://docs.aws.amazon.com/AmazonS3/latest/userguide/WebsiteHosting.html)
-- [Amazon CloudFront — Origin access](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html)
-- [GitHub Actions — Deploying to Amazon S3](https://docs.github.com/en/actions/deployment/deploying-to-your-cloud-provider/deploying-to-amazon-s3)
+- [Apache HTTP Server — mod_proxy](https://httpd.apache.org/docs/2.4/mod/mod_proxy.html)
+- [Certbot — Apache](https://certbot.eff.org/instructions?ws=apache&os=ubuntufocal)
+- [PM2 — Process Manager](https://pm2.keymetrics.io/docs/usage/quick-start/)
+- [GitHub Actions — Deploying to Amazon EC2](https://docs.github.com/en/actions/deployment/deploying-to-your-cloud-provider/deploying-to-amazon-ec2)
 - [GitHub Student Developer Pack](https://education.github.com/pack)
 - [Conventional Commits](https://www.conventionalcommits.org/es/)

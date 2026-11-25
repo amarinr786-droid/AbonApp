@@ -1,14 +1,14 @@
 # Guía de despliegue en AWS
 
-Objetivo: publicar AbonApp en `https://abonapp.tu-dominio.com` con el frontend en S3, la API en EC2 y CloudFront uniendo ambos bajo el mismo origen (necesario para que la cookie de sesión funcione).
+Objetivo: publicar AbonApp en `https://abonapp.tech` con **Apache** sirviendo el frontend estático y haciendo *reverse proxy* de `/api` hacia Express, todo en la misma instancia **Amazon EC2**. Un solo origen ⇒ la cookie de sesión funciona sin trucos de CORS.
 
 ```text
 Navegador
-   │ HTTPS
+   │ HTTPS (Certbot / Let's Encrypt)
    ▼
-CloudFront (ACM + dominio propio)
-   ├── /*      → S3 (sitio estático out/)
-   └── /api/*  → EC2 :3000 (Express + PM2)
+Apache 2.4 :80/:443  ── EC2 Ubuntu 24.04
+   ├── /*      → /var/www/html (export estático out/)
+   └── /api/*  → 127.0.0.1:3000 (Express + PM2)
                         │
                         └── SQLite (EBS)
 ```
@@ -19,206 +19,238 @@ CloudFront (ACM + dominio propio)
 
 ## 0. Antes de empezar
 
-- Cuenta de **AWS Academy** con el laboratorio iniciado (las credenciales caducan).
-- Dominio adquirido con el GitHub Student Developer Pack (Namecheap, Name.com, `.tech`, etc.).
-- Node.js 24 en la instancia EC2.
-- Repositorio clonado en EC2 y acceso SSH con el key pair.
+- Cuenta de **AWS Academy** con el laboratorio iniciado.
+- Dominio **`abonapp.tech`** comprado (plan básico; no hace falta *Domain Safe Pro*).
+- Instancia **EC2 Ubuntu 24.04** en ejecución y acceso SSH con el key pair.
+- Node.js **24** en la instancia (lo exige `node:sqlite`).
 
 ---
 
-## 1. S3 para el frontend
+## 1. Preparar la EC2
 
-1. Crea un bucket, por ejemplo `abonapp-frontend-TU-NOMBRE`, en la región `us-east-1`.
-2. Desactiva el bloqueo de acceso público solo si vas a usar el endpoint de sitio web estático:
-   - **Properties → Static website hosting → Enable**.
-   - Index document: `index.html`.
-   - Error document: `404.html`.
-3. Añade esta bucket policy (sitio público de solo lectura; no hay secretos en el frontend):
+### 1.1 Elastic IP (recomendado)
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Sid": "PublicReadGetObject",
-    "Effect": "Allow",
-    "Principal": "*",
-    "Action": "s3:GetObject",
-    "Resource": "arn:aws:s3:::abonapp-frontend-TU-NOMBRE/*"
-  }]
-}
+En **EC2 → Elastic IPs → Allocate Elastic IP address → Associate** con la instancia. Así la IP pública no cambia al detener/reiniciar el laboratorio y el DNS no se rompe.
+
+### 1.2 Security Group
+
+| Puerto | Origen | Uso |
+|---|---|---|
+| `22` | **Tu IP** | SSH |
+| `80` | `0.0.0.0/0` | HTTP (redirige a HTTPS) |
+| `443` | `0.0.0.0/0` | HTTPS |
+
+El puerto **3000 no se abre a Internet**: Apache llega a Express por `127.0.0.1` y es el único expuesto (80/443).
+
+### 1.3 Node 24 y PM2
+
+```bash
+node -v   # debe ser v24.x
 ```
 
-4. Anota el endpoint de sitio web:
-   `http://abonapp-frontend-TU-NOMBRE.s3-website-us-east-1.amazonaws.com`
-
-> Con CloudFront delante, los usuarios nunca ven este endpoint: solo ven tu dominio.
-
----
-
-## 2. EC2 para el backend
-
-1. Lanza una instancia **Ubuntu 24.04**, tipo `t2.micro` o `t3.micro`.
-2. Security Group:
-   - SSH (22) desde tu IP.
-   - Puerto **3000** desde el prefijo administrado de CloudFront (`com.amazonaws.global.cloudfront.origin-facing`). Si tu cuenta no permite prefijos administrados, limita temporalmente a `0.0.0.0/0` y documenta el riesgo; la API sigue protegida por login.
-3. Instala Node 24 y PM2:
+Si no lo es:
 
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
 sudo apt-get install -y nodejs git
 sudo npm install -g pm2
-node -v   # debe ser v24.x
+node -v
 ```
 
-4. Clona el repositorio y configura el backend:
+---
+
+## 2. Backend (Express + PM2)
 
 ```bash
+cd ~
 git clone https://github.com/amarinr786-droid/AbonApp.git
 cd AbonApp/backend
 npm ci --omit=dev
-cp .env.example .env
-nano .env
 ```
 
-Contenido de `.env` en producción:
-
-```env
-PORT=3000
-FRONTEND_URL=https://abonapp.tu-dominio.com
-SESSION_SECRET=<cadena aleatoria de 64 caracteres>
-COOKIE_SECURE=true
-NODE_ENV=production
-```
-
-Genera el secreto con:
+Crea el `.env` (genera el secreto en el momento):
 
 ```bash
-node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+SECRET=$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")
+cat > .env <<EOF
+PORT=3000
+FRONTEND_URL=https://abonapp.tech
+SESSION_SECRET=$SECRET
+COOKIE_SECURE=false
+NODE_ENV=production
+EOF
 ```
 
-5. Arranca con PM2:
+> Mientras no exista HTTPS, deja `COOKIE_SECURE=false`. Al terminar el paso 5 (Certbot) cámbialo a `true`.
+
+Arranca y verifica:
 
 ```bash
 pm2 start ecosystem.config.js
 pm2 save
-pm2 startup   # ejecuta el comando que imprima
-curl http://127.0.0.1:3000/api/health   # {"status":"ok"}
+pm2 startup        # ejecuta el comando que imprima para arrancar al bootear
+sleep 2
+pm2 status         # abonapp-api debe estar online
+curl -s http://127.0.0.1:3000/api/health   # {"status":"ok"}
 ```
 
-6. Anota el **DNS público IPv4** de la instancia (por ejemplo `ec2-3-12-34-56.compute-1.amazonaws.com`).
+Si falla: `pm2 logs abonapp-api --lines 80`.
 
 ---
 
-## 3. Certificado ACM (us-east-1)
+## 3. Frontend (Apache)
 
-1. **AWS Certificate Manager → Request certificate → Public certificate** en **us-east-1** (CloudFront solo acepta certificados de esa región).
-2. Dominio: `abonapp.tu-dominio.com`.
-3. Valida por DNS: crea el registro CNAME que indique ACM en tu proveedor de DNS.
-4. Espera el estado **Issued**.
-
----
-
-## 4. Distribución CloudFront
-
-1. **Create distribution**.
-2. **Origin 1 (frontend)**:
-   - Origin domain: el endpoint de sitio web de S3 (`...s3-website-us-east-1.amazonaws.com`).
-   - Protocol: **HTTP only**.
-3. **Origin 2 (API)**:
-   - Origin domain: DNS público de EC2.
-   - Protocol: **HTTP only**, puerto **3000**.
-4. **Default behavior (`/*`)**:
-   - Origin: S3.
-   - Viewer protocol policy: **Redirect HTTP to HTTPS**.
-   - Cache policy: `CachedOptimized` o la predeterminada.
-   - Default root object: `index.html`.
-   - Custom error response: 404 → `/404.html` con código 404.
-5. **Behavior `/api/*`**:
-   - Origin: EC2.
-   - Viewer protocol policy: **Redirect HTTP to HTTPS**.
-   - **Cache policy: `CachingDisabled`** (la API no se cachea).
-   - **Origin request policy: `AllViewer`** (reenvía cookies, headers y query strings; imprescindible para la sesión).
-   - Allowed HTTP methods: `GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE`.
-6. **Settings**:
-   - Alternate domain name (CNAME): `abonapp.tu-dominio.com`.
-   - Custom SSL certificate: el certificado ACM.
-   - Supported HTTP versions: HTTP/2 y HTTP/3.
-7. Anota el **Distribution ID** (lo usa el workflow).
-
-> Si la API devuelve `502`, revisa que el Security Group permita el puerto 3000 desde CloudFront y que PM2 esté corriendo (`pm2 status`).
-
----
-
-## 5. DNS del dominio
-
-**Route 53** (si el dominio está ahí):
-- Crea un registro **A** con **Alias** hacia la distribución de CloudFront.
-
-**Namecheap / Name.com** (si el dominio está ahí):
-- Crea un **CNAME**: host `abonapp`, valor `dxxxxxxxxxxxx.cloudfront.net`.
-
-Espera la propagación y comprueba:
+### 3.1 Compilar en la EC2
 
 ```bash
-nslookup abonapp.tu-dominio.com
-curl -I https://abonapp.tu-dominio.com
-curl https://abonapp.tu-dominio.com/api/health
-```
+# swap temporal si la instancia tiene poca RAM (t2/t3.micro)
+if [ ! -f /swapfile ]; then
+  sudo fallocate -l 2G /swapfile
+  sudo chmod 600 /swapfile
+  sudo mkswap /swapfile
+  sudo swapon /swapfile
+fi
 
----
-
-## 6. Compilar y subir manualmente (primera vez)
-
-```bash
-cd abonapp
+cd ~/AbonApp/abonapp
+npm ci
 NEXT_PUBLIC_API_URL=/api npm run build
-aws s3 sync out/ s3://abonapp-frontend-TU-NOMBRE --delete
-aws cloudfront create-invalidation \
-  --distribution-id TU_DISTRIBUTION_ID --paths "/*"
+ls -lh out/index.html
 ```
 
-En PowerShell:
+> `NEXT_PUBLIC_API_URL` queda incrustada en el JS. Si cambia, hay que recompilar.
+
+Alternativa desde tu PC (evita compilar en la instancia):
 
 ```powershell
-cd abonapp
+cd C:\Users\amari\Documents\AbonApp\abonapp
 $env:NEXT_PUBLIC_API_URL="/api"; npm run build
-aws s3 sync out/ s3://abonapp-frontend-TU-NOMBRE --delete
-aws cloudfront create-invalidation --distribution-id TU_DISTRIBUTION_ID --paths "/*"
+scp -i "C:\ruta\llave.pem" -r .\out ubuntu@IP_ELASTICA:/home/ubuntu/
+```
+
+### 3.2 Apache
+
+```bash
+sudo apt install apache2 -y
+sudo a2enmod proxy proxy_http rewrite headers ssl
+```
+
+Copia el VirtualHost de referencia del repositorio:
+
+```bash
+sudo cp ~/AbonApp/docs/apache-abonapp.conf /etc/apache2/sites-available/000-default.conf
+```
+
+O créalo a mano:
+
+```apache
+<VirtualHost *:80>
+    ServerName abonapp.tech
+    ServerAlias www.abonapp.tech
+
+    DocumentRoot /var/www/html
+
+    <Directory /var/www/html>
+        Options -Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+    DirectoryIndex index.html
+
+    ProxyPreserveHost On
+    ProxyPass /api http://127.0.0.1:3000/api
+    ProxyPassReverse /api http://127.0.0.1:3000/api
+
+    ErrorDocument 404 /404.html
+</VirtualHost>
+```
+
+Publica el build:
+
+```bash
+sudo rsync -a --delete ~/AbonApp/abonapp/out/ /var/www/html/
+sudo chown -R www-data:www-data /var/www/html
+sudo apache2ctl configtest
+sudo systemctl reload apache2
+
+curl -I http://localhost/
+curl -s http://localhost/api/health
+```
+
+Prueba en el navegador `http://IP_ELASTICA/`: debe cargar la landing y permitir registro/login.
+
+---
+
+## 4. DNS del dominio
+
+En **Name.com → DNS Records** (o el proveedor donde compraste el dominio):
+
+| Tipo | Host | Valor | TTL |
+|---|---|---|---|
+| `A` | `@` | **Elastic IP** | 300 |
+| `A` | `www` | **Elastic IP** | 300 |
+
+Comprueba la propagación:
+
+```bash
+nslookup abonapp.tech
+nslookup www.abonapp.tech
 ```
 
 ---
 
-## 7. CI/CD con GitHub Actions
+## 5. HTTPS con Certbot
+
+```bash
+sudo apt install certbot python3-certbot-apache -y
+sudo certbot --apache -d abonapp.tech -d www.abonapp.tech --redirect
+```
+
+Certbot crea el VirtualHost `*:443`, instala el certificado y redirige HTTP → HTTPS. Renovación automática con el timer de systemd (`systemctl status certbot.timer`).
+
+Activa la cookie segura:
+
+```bash
+cd ~/AbonApp/backend
+sed -i 's/^COOKIE_SECURE=.*/COOKIE_SECURE=true/' .env
+pm2 restart abonapp-api --update-env
+```
+
+Verifica:
+
+```bash
+curl -I https://abonapp.tech
+curl -s https://abonapp.tech/api/health
+```
+
+---
+
+## 6. CI/CD con GitHub Actions
 
 En **Settings → Secrets and variables → Actions** crea:
 
-| Secreto | Cómo obtenerlo |
+| Secreto | Valor |
 |---|---|
-| `AWS_ACCESS_KEY_ID` | AWS Academy → AWS Details → Access key. |
-| `AWS_SECRET_ACCESS_KEY` | AWS Academy → AWS Details → Secret key. |
-| `AWS_REGION` | `us-east-1`. |
-| `S3_BUCKET` | Nombre del bucket. |
-| `CLOUDFRONT_DISTRIBUTION_ID` | ID de la distribución. |
-| `EC2_HOST` | DNS público o IP elástica de EC2. |
+| `EC2_HOST` | Elastic IP de la instancia. |
 | `EC2_USER` | `ubuntu`. |
 | `EC2_SSH_KEY` | Contenido completo del archivo `.pem`. |
 | `EC2_APP_DIR` | `/home/ubuntu/AbonApp`. |
+| `WEB_ROOT` | `/var/www/html`. |
 
 Luego:
 
 1. Haz merge a `main` o entra a **Actions → Deploy → Run workflow**.
-2. El job `deploy-frontend` compila con `/api`, sube `out/` a S3 e invalida CloudFront.
-3. El job `deploy-backend` entra por SSH, hace `git pull`, `npm ci --omit=dev` y `pm2 startOrReload`.
-4. Verifica `https://abonapp.tu-dominio.com/api/health`.
+2. `deploy-frontend` compila con `/api`, copia `out/` a `/tmp/abonapp-out`, lo publica en `WEB_ROOT`, recarga Apache y comprueba `/api/health`.
+3. `deploy-backend` entra por SSH, hace `git pull`, `npm ci --omit=dev` y `pm2 startOrReload`.
+4. Verifica `https://abonapp.tech/api/health`.
 
-> **AWS Academy:** las credenciales del laboratorio son temporales. Cuando reinicies el lab, actualiza `AWS_ACCESS_KEY_ID` y `AWS_SECRET_ACCESS_KEY` en GitHub.
+> **AWS Academy:** la instancia se detiene al cerrar el laboratorio. Mantén una Elastic IP y actualiza `EC2_HOST` si cambia. Mientras no existan los secretos, el workflow se omite con un aviso (no falla). El despliegue manual de las secciones 2 y 3 sigue disponible como respaldo.
 
 ---
 
-## 8. Checklist de aceptación
+## 7. Checklist de aceptación
 
-- [ ] `https://abonapp.tu-dominio.com` carga la landing con candado HTTPS.
-- [ ] `https://abonapp.tu-dominio.com/api/health` responde `{"status":"ok"}`.
+- [ ] `https://abonapp.tech` carga la landing con candado HTTPS.
+- [ ] `https://abonapp.tech/api/health` responde `{"status":"ok"}`.
 - [ ] Registro y login funcionan; al recargar el dashboard la sesión se mantiene.
 - [ ] Crear cliente → deuda → abono actualiza saldo y estado.
 - [ ] No se puede entrar a `/dashboard` sin sesión (redirige a `/login`).
@@ -228,13 +260,15 @@ Luego:
 
 ---
 
-## 9. Problemas frecuentes
+## 8. Problemas frecuentes
 
 | Síntoma | Causa probable | Solución |
 |---|---|---|
-| La sesión no se mantiene | Frontend y API en orígenes distintos, o `COOKIE_SECURE=true` sin HTTPS | Usa CloudFront con `/api` en el mismo dominio y HTTPS. |
+| La sesión no se mantiene | `COOKIE_SECURE` no coincide con el esquema, o `FRONTEND_URL` incorrecto | HTTP → `false`; HTTPS → `true`. Revisa `FRONTEND_URL=https://abonapp.tech`. |
 | `Cannot find module 'node:sqlite'` | Node < 24 en EC2 | Instala Node 24 (`node -v`). |
-| `502 Bad Gateway` en `/api/*` | EC2 apagada, PM2 caído o Security Group sin el puerto 3000 | `pm2 status`, revisa el SG y el origen de CloudFront. |
-| El dashboard recarga a `/login` | Cookie bloqueada o `FRONTEND_URL` incorrecto | Revisa `COOKIE_SECURE`, `FRONTEND_URL` y la política `AllViewer` del behavior `/api/*`. |
-| 404 al entrar a `/dashboard/` | S3 sin `index.html` como índice o CloudFront con origen REST (no website) | Usa el endpoint de sitio web de S3 como origen. |
-| El build apunta a `localhost:3000` | Se compiló sin `NEXT_PUBLIC_API_URL` | Vuelve a compilar con `NEXT_PUBLIC_API_URL=/api`. |
+| `502 Bad Gateway` en `/api/*` | PM2 caído | `pm2 status` y `pm2 logs abonapp-api`. |
+| `503` en `/api/*` | `mod_proxy` deshabilitado | `sudo a2enmod proxy proxy_http` y recarga Apache. |
+| 404 al entrar a `/dashboard/` | Falta `DirectoryIndex` o el `rsync` no copió las carpetas | Revisa `/var/www/html/dashboard/index.html` y `rsync`. |
+| El build apunta a `localhost:3000` | Se compiló sin `NEXT_PUBLIC_API_URL` | Recompila con `NEXT_PUBLIC_API_URL=/api`. |
+| Cambios no se ven tras desplegar | Caché del navegador/CDN | Recarga forzada (`Ctrl+F5`); el `out/` tiene hashes nuevos. |
+| Certbot falla | DNS aún no apunta a la IP o falta el puerto 80 | `nslookup abonapp.tech`, abre 80 en el Security Group. |
