@@ -10,12 +10,12 @@
 
 ## Información académica
 
-- **Universidad: Universidad de la costa CUC**
-- **Programa / asignatura**: Buenas practicas de desarrollo de software 
+- **Universidad:** Universidad de la Costa (CUC)
+- **Programa / asignatura:** Buenas prácticas de desarrollo de software
 - **Integrantes:**
   - Abraham Marín — [@amarinr786-droid](https://github.com/amarinr786-droid)
   - Jayri Nicole Barreto Polo — [@jayrinicolleb-boop](https://github.com/jayrinicolleb-boop)
-  - `[POR COMPLETAR: tercer integrante — usuario de GitHub]`
+  - Andrés Camilo Zea Tarazona — [@Azeat](https://github.com/Azeat)
 - **Corte:** 3
 
 ---
