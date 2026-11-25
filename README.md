@@ -312,30 +312,31 @@ Se ejecuta al hacer **push a `main`** o manualmente (`workflow_dispatch`). Prime
 
 ---
 
-## 8. Dominio, DNS y HTTPS
+8. Configuración de Dominio, DNS y Cifrado HTTPS
+Adquisición del dominio: Registro de abonapp.tech (configuración estándar sin complementos adicionales) mediante los beneficios del GitHub Student Developer Pack.
 
-1. Registrar el dominio con el **GitHub Student Developer Pack** (Namecheap, Name.com, `.tech`, etc.). En este proyecto: **`abonapp.tech`** (plan básico, sin add-ons).
-2. Asociar una **Elastic IP** a la instancia EC2.
-3. En el DNS del proveedor (Name.com → DNS Records):
-   - `A` — host `@` — valor **Elastic IP**
-   - `A` — host `www` — valor **Elastic IP**
-4. Verificar la propagación: `nslookup abonapp.tech`.
-5. En la EC2, emitir el certificado y forzar HTTPS:
+Asignación de IP estática: Vinculación de una Elastic IP a la instancia Amazon EC2 para mantener una dirección pública fija.
 
-```bash
+Registros DNS: En el panel del proveedor DNS (Name.com → DNS Records), se configuran los registros tipo A apuntando a la Elastic IP:
+
+Tipo A — Host @ — Valor: Elastic IP
+
+Tipo A — Host www — Valor: Elastic IP
+
+Validación de propagación: Comprobación de la resolución del dominio mediante:
+
+Bash
+nslookup abonapp.tech
+Emisión de certificado SSL/TLS y redirección forzada: En la instancia EC2, se instala Certbot para Apache, se solicita el certificado de Let's Encrypt para el dominio raíz y www, y se habilita la redirección automática de HTTP a HTTPS:
+
+Bash
 sudo apt install certbot python3-certbot-apache -y
 sudo certbot --apache -d abonapp.tech -d www.abonapp.tech --redirect
-```
+Seguridad de cookies y recarga del servicio: Se actualiza COOKIE_SECURE=true en backend/.env para exigir transmisión cifrada de la cookie de sesión y se reinicia el proceso de la API aplicando las nuevas variables de entorno:
 
-6. Cambiar `COOKIE_SECURE=true` en `backend/.env` y recargar:
-
-```bash
+Bash
 pm2 restart abonapp-api --update-env
-```
-
-Con esto la app queda en `https://abonapp.tech`, sin IP, sin puertos y sin URLs por defecto de Netlify/Vercel. El certificado de Let's Encrypt se renueva solo (timer de `certbot`).
-
----
+De este modo, la plataforma queda operativa en [https://abonapp.tech](https://abonapp.tech) bajo un dominio propio y seguro, sin exponer direcciones IP, puertos internos ni URLs por defecto de plataformas de terceros, con renovación automática del certificado gestionada por el timer de certbot.
 
 ## 9. Evidencias de funcionamiento
 
