@@ -17,7 +17,7 @@
   - Jayri Nicole Barreto Polo — [@jayrinicolleb-boop](https://github.com/jayrinicolleb-boop)
   - Andrés Camilo Zea Tarazona — [@Azeat](https://github.com/Azeat)
   - Maria Celeste Bonilla Jaraba — [@Celeste976](https://github.com/Celeste976)
-- **Corte:** 3
+- **Corte:** 3 **Proyecto final**
 
 ---
 
